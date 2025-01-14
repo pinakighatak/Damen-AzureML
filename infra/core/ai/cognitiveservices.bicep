@@ -38,30 +38,7 @@ module aiServices 'br/public:avm/res/cognitive-services/account:0.9.1' = {
     kind: kind
     publicNetworkAccess: 'Disabled'
     disableLocalAuth: true
-    privateEndpoints: [
-      {
-        name: aiServicesPleName
-        subnetResourceId: subnetId
-        privateLinkServiceConnectionName: aiServicesPleName
-        applicationSecurityGroupResourceIds: [
-          'account'
-        ]
-        privateDnsZoneGroup: {
-          name: 'default'
 
-          privateDnsZoneGroupConfigs: [
-            {
-              name: replace(openAiPrivateDnsZoneName, '.', '-')
-              privateDnsZoneResourceId: openAiPrivateDnsZone.outputs.resourceId
-            }
-            {
-              name: replace(cognitiveServicesPrivateDnsZoneName, '.', '-')
-              privateDnsZoneResourceId: cognitiveServicesPrivateDnsZone.outputs.resourceId
-            }
-          ]
-        }
-      }
-    ]
     networkAcls: {
       defaultAction: 'Deny'
       virtualNetworkRules: [
@@ -71,11 +48,47 @@ module aiServices 'br/public:avm/res/cognitive-services/account:0.9.1' = {
         }
       ]
     }
+
     managedIdentities: {
       systemAssigned: true
     }
     sku: 'S0'
     deployments: []
+  }
+}
+
+//create private endpoints for the keyvault
+module aiServicesPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.1' = {
+  name: aiServicesPleName
+  params: {
+    name: aiServicesPleName
+    location: location
+    subnetResourceId: subnetId
+    tags: tags
+    privateLinkServiceConnections: [
+      {
+        name: aiServicesPleName
+        properties: {
+          privateLinkServiceId: aiServices.outputs.resourceId
+          groupIds: [
+            'account'
+          ]
+        }
+      }
+    ]
+    privateDnsZoneGroup: {
+      name: 'default'
+      privateDnsZoneGroupConfigs: [
+        {
+          name: replace(openAiPrivateDnsZoneName, '.', '-')
+          privateDnsZoneResourceId: openAiPrivateDnsZone.outputs.resourceId
+        }
+        {
+          name: replace(cognitiveServicesPrivateDnsZoneName, '.', '-')
+          privateDnsZoneResourceId: cognitiveServicesPrivateDnsZone.outputs.resourceId
+        }
+      ]
+    }
   }
 }
 
@@ -114,4 +127,5 @@ module openAiPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.0' =
 }
 
 output aiServicesResourceId string = aiServices.outputs.resourceId
-output aiServiceEndpoint string = aiServices.outputs.endpoint
+output aiservicesTarget string = aiServices.outputs.endpoint
+

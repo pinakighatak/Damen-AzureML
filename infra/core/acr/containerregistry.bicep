@@ -30,38 +30,49 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.7.0' =
     publicNetworkAccess: 'Disabled'
     zoneRedundancy: 'Disabled'
     tags: tags
-    privateEndpoints: [
+  }
+}
+
+//create private endpoints for the keyvault
+module containerRegistryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.1' = {
+  name: containerRegistryPleName
+  params: {
+    name: containerRegistryPleName
+    location: location
+    subnetResourceId: subnetResourceId
+    tags: tags
+    privateLinkServiceConnections: [
       {
-        name: containerRegistryPleName
-        subnetResourceId: subnetResourceId
-        privateLinkServiceConnectionName: containerRegistryPleName
-        applicationSecurityGroupResourceIds: [
-          'registry'
-        ]
-        privateDnsZoneGroup: {
-          name: 'registry-PrivateDnsZoneGroup'
-          privateDnsZoneGroupConfigs: [
-            {
-              name: privateDnsZoneName
-              privateDnsZoneResourceId: acrPrivateDnsZone.outputs.resourceId
-            }
+        name: uniqueString(containerRegistryPleName)
+        properties: {
+          privateLinkServiceId: containerRegistry.outputs.resourceId
+          groupIds: [
+            'registry'
           ]
         }
       }
     ]
+    privateDnsZoneGroup: {
+      name: 'registry-privatednszonegroup'
+      privateDnsZoneGroupConfigs: [
+        {
+          name: privateDnsZoneName
+          privateDnsZoneResourceId: acrPrivateDnsZone.outputs.resourceId
+        }
+      ]
+    }
   }
 }
-
 module acrPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.0' = {
   name: privateDnsZoneName
   params: {
-    // Required parameters
     name: privateDnsZoneName
-    // Non-required parameters
     location: 'global'
+    tags: tags
     virtualNetworkLinks: [
       {
-        name: uniqueString(virtualNetworkId)
+        name: uniqueString(containerRegistry.outputs.resourceId)
+        location: 'global'
         registrationEnabled: false
         virtualNetworkResourceId: virtualNetworkId
       }

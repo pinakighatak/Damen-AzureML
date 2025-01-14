@@ -12,6 +12,9 @@ param amlWorkspaceName string
 @description('Resource ID of the application insights resource for storing diagnostics logs')
 param applicationInsightsId string
 
+@description('Name of the custom network interface NIC for the private endpoint')
+param customNetworkInterfaceName string
+
 @description('Resource ID of the container registry resource for storing docker images')
 param containerRegistryId string
 
@@ -35,7 +38,6 @@ param subnetResourceId string
 
 var privateEndpointName = '${amlWorkspaceName}-amlWorkspace-PE'
 
-
 // Create the Azure Machine Learning workspace from AVM
 module amlWorkspace 'br/public:avm/res/machine-learning-services/workspace:0.9.1' = {
   name: amlWorkspaceName
@@ -50,32 +52,11 @@ module amlWorkspace 'br/public:avm/res/machine-learning-services/workspace:0.9.1
     associatedKeyVaultResourceId: keyVaultId
     associatedStorageAccountResourceId: storageAccountId
     publicNetworkAccess: 'Disabled'
+
+    description: 'Azure Machine Learning workspace'
     managedNetworkSettings: {
       isolationMode: 'AllowInternetOutbound'
     }
-    privateEndpoints: [
-      {
-        name: privateEndpointName
-        subnetResourceId: subnetResourceId
-        privateLinkServiceConnectionName: amlWorkspaceName
-        applicationSecurityGroupResourceIds: [
-          'amlworkspace'
-        ]
-        privateDnsZoneGroup: {
-          name: 'default'
-          privateDnsZoneGroupConfigs: [
-            {
-              name: 'privatelink-api-azureml-ms'
-              privateDnsZoneResourceId: privateLinkApi.outputs.resourceId
-            }
-            {
-              name: 'privatelink-notebooks-azure-net'
-              privateDnsZoneResourceId: privateLinkNotebooks.outputs.resourceId
-            }
-          ]
-        }
-      }
-    ]
     connections: [
       {
         name: '${amlWorkspaceName}-connection-AIServices'
@@ -94,6 +75,41 @@ module amlWorkspace 'br/public:avm/res/machine-learning-services/workspace:0.9.1
         }
       }
     ]
+  }
+}
+//create private endpoints for the keyvault
+module amlWorkspacePrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.1' = {
+  name: privateEndpointName
+  params: {
+    name: privateEndpointName
+    location: location
+    subnetResourceId: subnetResourceId
+    tags: tags
+    customNetworkInterfaceName: customNetworkInterfaceName
+    privateLinkServiceConnections: [
+      {
+        name: amlWorkspaceName
+        properties: {
+          privateLinkServiceId: amlWorkspace.outputs.resourceId
+          groupIds: [
+            'amlworkspace'
+          ]
+        }
+      }
+    ]
+    privateDnsZoneGroup: {
+      name: 'default'
+      privateDnsZoneGroupConfigs: [
+        {
+          name: 'privatelink-api-azureml-ms'
+          privateDnsZoneResourceId: privateLinkApi.outputs.resourceId
+        }
+        {
+          name: 'privatelink-notebooks-azure-net'
+          privateDnsZoneResourceId: privateLinkNotebooks.outputs.resourceId
+        }
+      ]
+    }
   }
 }
 
@@ -123,7 +139,7 @@ module privateLinkNotebooks 'br/public:avm/res/network/private-dns-zone:0.7.0' =
     location: 'global'
     virtualNetworkLinks: [
       {
-        name: uniqueString(vnetResourceId)
+        name: '${uniqueString(vnetResourceId)}-notebooks'
         registrationEnabled: false
         virtualNetworkResourceId: vnetResourceId
       }

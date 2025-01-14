@@ -7,11 +7,11 @@ workflows:
   up:
     steps:
       - azd: provision
-hooks:
-  postprovision:
-    windows:
-      shell: pwsh
-      run: ./hooks/postprovision.ps1
-    posix:
-      shell: sh
-      run: ./hooks/postprovision.sh
+# hooks:
+#   postprovision:
+#     windows:
+#       shell: pwsh
+#       run: ./hooks/postprovision.ps1
+#     posix:
+#       shell: sh
+#       run: ./hooks/postprovision.sh

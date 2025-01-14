@@ -1,7 +1,7 @@
 using './main.bicep'
-param amlName = 'DS-AML-Demo'
-param vnetRgName = 'rg-Devcenter'
-param vnetName = 'vNet-Devcenter'
+param amlName = 'ds-aml-demo'
+param vnetRgName = 'rg-networks-dev'
+param vnetName = 'vNet-damen-openai'
 param subnetName = 'subnet-openai'
 
 param environmentName = readEnvironmentVariable('AZURE_ENV_NAME', 'MY_ENV')

@@ -33,4 +33,4 @@ module applicationInsights 'br/public:avm/res/insights/component:0.4.2' = {
     tags: tags
   }
 }
-output applicationInsightsResourceId string = applicationInsights.outputs.applicationId
+output applicationInsightsResourceId string = applicationInsights.outputs.resourceId

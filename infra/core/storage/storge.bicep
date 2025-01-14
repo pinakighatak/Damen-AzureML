@@ -36,7 +36,6 @@ param storageSkuName string = 'Standard_LRS'
 var storageNameCleaned = replace(storageName, '-', '')
 
 var blobPrivateDnsZoneName = 'privatelink.blob.${environment().suffixes.storage}'
-
 var filePrivateDnsZoneName = 'privatelink.file.${environment().suffixes.storage}'
 
 //create a storage from AVM
@@ -52,48 +51,97 @@ module storage 'br/public:avm/res/storage/storage-account:0.15.0' = {
     accessTier: 'Hot'
     allowBlobPublicAccess: false
     allowSharedKeyAccess: false
-    privateEndpoints: [
-      {
-        service: 'Blob'
-        name: storagePleBlobName
-        subnetResourceId: subnetId
-        privateLinkServiceConnectionName: storagePleBlobName
-        applicationSecurityGroupResourceIds: [
-          'account'
-        ]
-        privateDnsZoneGroup: {
-          name: 'default'
-          privateDnsZoneGroupConfigs: [
-            {
-              name: blobPrivateDnsZoneName
-              privateDnsZoneResourceId: blobPrivateDnsZone.outputs.resourceId
-            }
-            {
-              name: filePrivateDnsZoneName
-              privateDnsZoneResourceId: filePrivateDnsZone.outputs.resourceId
-            }
-          ]
-        }
+    
+    blobServices: {
+      ketType: 'Account'
+      deleteRetentionPolicy: {
+        days: 7
+        enabled: true
       }
+    }
+    fileServices: {
+      ketType: 'Account'
+    }
+    // queueServices: {
+      
+    //   ketType: 'service'
+
+    // }
+    // tableServices: {
+    //   ketType: 'service'
+    // }
+    enableHierarchicalNamespace: false
+    enableNfsV3: false
+    largeFileSharesState: 'Disabled'
+    minimumTlsVersion: 'TLS1_2'
+    networkAcls: {
+      bypass: 'AzureServices'
+      defaultAction: 'Deny'
+    }
+    supportsHttpsTrafficOnly: true
+  }
+}
+
+
+//create private endpoints for the blob storage
+module storagePrivateEndpointBlob 'br/public:avm/res/network/private-endpoint:0.9.1' = {
+  name: storagePleBlobName
+  params: {
+    name: storagePleBlobName
+    location: location
+    subnetResourceId: subnetId
+    tags: tags
+    privateLinkServiceConnections: [
       {
-        name: storagePleFileName
-        service: 'File'
-        subnetResourceId: subnetId
-        privateLinkServiceConnectionName: storagePleFileName
-        applicationSecurityGroupResourceIds: [
-          'account'
-        ]
-        privateDnsZoneGroup: {
-          name: 'default'
-          privateDnsZoneGroupConfigs: [
-            {
-              name: filePrivateDnsZoneName
-              privateDnsZoneResourceId: filePrivateDnsZone.outputs.resourceId
-            }
+        name: storagePleBlobName
+        properties: {
+          privateLinkServiceId: storage.outputs.resourceId
+          groupIds: [
+            'blob'
           ]
         }
       }
     ]
+    privateDnsZoneGroup: {
+      name: 'blob-privatednszonegroup'
+      privateDnsZoneGroupConfigs: [
+        {
+          name: blobPrivateDnsZoneName
+          privateDnsZoneResourceId: blobPrivateDnsZone.outputs.resourceId
+        }
+      ]
+    }
+  }
+}
+
+//create private endpoints for the file storage
+module storagePrivateEndpointFile 'br/public:avm/res/network/private-endpoint:0.9.1' = {
+  name: storagePleFileName
+  params: {
+    name: storagePleFileName
+    location: location
+    subnetResourceId: subnetId
+    tags: tags
+    privateLinkServiceConnections: [
+      {
+        name: storagePleFileName
+        properties: {
+          privateLinkServiceId: storage.outputs.resourceId
+          groupIds: [
+            'file'
+          ]
+        }
+      }
+    ]
+    privateDnsZoneGroup: {
+      name: 'file-privatednszonegroup'
+      privateDnsZoneGroupConfigs: [
+        {
+          name: filePrivateDnsZoneName
+          privateDnsZoneResourceId: filePrivateDnsZone.outputs.resourceId
+        }
+      ]
+    }
   }
 }
 
@@ -106,7 +154,7 @@ module blobPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.0' = {
     location: 'global'
     virtualNetworkLinks: [
       {
-        name: uniqueString(virtualNetworkId)
+        name: uniqueString(storage.outputs.resourceId)
         registrationEnabled: false
         virtualNetworkResourceId: virtualNetworkId
       }
@@ -122,10 +170,11 @@ module filePrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.0' = {
     location: 'global'
     virtualNetworkLinks: [
       {
-        name: uniqueString(virtualNetworkId)
+        name: uniqueString(storage.outputs.resourceId)
         registrationEnabled: false
         virtualNetworkResourceId: virtualNetworkId
       }
     ]
   }
 }
+output storageResourceId string = storage.outputs.resourceId
