@@ -1,5 +1,4 @@
 using './main.bicep'
-param amlName = 'ds-aml-demo'
 param vnetRgName = 'rg-networks-dev'
 param vnetName = 'vNet-damen-openai'
 param subnetName = 'subnet-openai'

@@ -8,9 +8,6 @@ param tags object = {}
 @description('The name of the Key Vault')
 param keyvaultName string
 
-@description('The name of the Key Vault private link endpoint')
-param keyvaultPleName string
-
 @description('The Subnet ID where the Key Vault Private Link is to be created')
 param subnetId string
 
@@ -19,59 +16,6 @@ param virtualNetworkId string
 
 var privateDnsZoneName = 'privatelink${environment().suffixes.keyvaultDns}'
 
-//create keyvault from AVM
-module keyVault 'br/public:avm/res/key-vault/vault:0.11.1' = {
-  name: keyvaultName
-  params: {
-    name: keyvaultName
-    location: location
-    sku: 'standard'
-
-    tags: tags
-    createMode: 'default'
-    enableVaultForDeployment: false
-    enableVaultForDiskEncryption: false
-    enableVaultForTemplateDeployment: false
-    enableSoftDelete: true
-    //enablePurgeProtection: true
-    networkAcls: {
-      defaultAction: 'Deny'
-      bypass: 'AzureServices'
-    }
-  }
-}
-
-//create private endpoints for the keyvault
-module keyVaultPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.1' = {
-  name: keyvaultPleName
-  params: {
-    name: keyvaultPleName
-    location: location
-    subnetResourceId: subnetId
-    tags: tags
-    privateLinkServiceConnections: [
-      {
-        name: uniqueString(keyvaultPleName)
-        properties: {
-          privateLinkServiceId: keyVault.outputs.resourceId
-          groupIds: [
-            'vault'
-          ]
-        }
-      }
-    ]
-    privateDnsZoneGroup: {
-      name: 'vault-privatednszonegroup'
-      privateDnsZoneGroupConfigs: [
-        {
-          name: privateDnsZoneName
-          privateDnsZoneResourceId: keyVaultPrivateDnsZone.outputs.resourceId
-        }
-      ]
-    }
-  }
-}
-
 //create private DNS zone and link from AVM
 module keyVaultPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.0' = {
   name: privateDnsZoneName
@@ -79,9 +23,16 @@ module keyVaultPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.0'
     name: privateDnsZoneName
     location: 'global'
     tags: tags
+    // a:[]
+    // aaaa: []
+    // cname: []
+    // mx: []
+    // ptr: []
+    // soa: []
+    // srv: []
+    // txt: []
     virtualNetworkLinks: [
       {
-        name: uniqueString(keyVault.outputs.resourceId)
         location: 'global'
         registrationEnabled: false
         virtualNetworkResourceId: virtualNetworkId
@@ -89,5 +40,71 @@ module keyVaultPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.0'
     ]
   }
 }
+
+//create keyvault from AVM
+module keyVault 'br/public:avm/res/key-vault/vault:0.11.1' = {
+  name: keyvaultName
+  params: {
+    name: keyvaultName
+    location: location
+    sku: 'standard'
+    tags: tags
+    createMode: 'default'
+    enableVaultForDeployment: false
+    enableVaultForDiskEncryption: false
+    enableVaultForTemplateDeployment: false
+    enableSoftDelete: true
+    enablePurgeProtection: false
+    networkAcls: {
+      defaultAction: 'Deny'
+      bypass: 'AzureServices'
+    }
+    privateEndpoints: [
+      {
+        subnetResourceId: subnetId
+        service: 'vault'
+        privateDnsZoneGroup: {
+          privateDnsZoneGroupConfigs: [
+            {
+              name: privateDnsZoneName
+              privateDnsZoneResourceId: keyVaultPrivateDnsZone.outputs.resourceId
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
+
+// //create private endpoints for the keyvault
+// module keyVaultPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.1' = {
+//   name: privateEndPointName
+//   params: {
+//     name: privateEndPointName
+//     location: location
+//     subnetResourceId: subnetId
+//     tags: tags
+//     privateLinkServiceConnections: [
+//       {
+//         name: uniqueString(keyvaultPleName)
+//         properties: {
+//           privateLinkServiceId: keyVault.outputs.resourceId
+//           groupIds: [
+//             'vault'
+//           ]
+//         }
+//       }
+//     ]
+//     privateDnsZoneGroup: {
+//       name: 'vault-privatednszonegroup'
+//       privateDnsZoneGroupConfigs: [
+//         {
+//           name: privateDnsZoneName
+//           privateDnsZoneResourceId: keyVaultPrivateDnsZone.outputs.resourceId
+//         }
+//       ]
+//     }
+//   }
+// }
 
 output keyVaultResourceId string = keyVault.outputs.resourceId

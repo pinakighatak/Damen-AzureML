@@ -9,6 +9,8 @@ param tags object
 @description('AML name')
 param amlWorkspaceName string
 
+param privateZoneGroupName string
+
 @description('Resource ID of the application insights resource for storing diagnostics logs')
 param applicationInsightsId string
 
@@ -36,8 +38,63 @@ param vnetResourceId string
 @description('Subnet Id to deploy into.')
 param subnetResourceId string
 
-var privateEndpointName = '${amlWorkspaceName}-amlWorkspace-PE'
+@description('Private endpoint name')
+param privateEndpointName string
 
+var azuremlPrivateDnsZoneName = 'privatelink.api.azureml.ms'
+var notebooksPrivateDnsZoneName = 'privatelink.notebooks.azure.com'
+
+module azuremlPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.0' = {
+  name: azuremlPrivateDnsZoneName
+  params: {
+    // Required parameters
+    name: azuremlPrivateDnsZoneName
+    // Non-required parameters
+    location: 'global'
+    tags: tags
+    // a:[]
+    // aaaa: []
+    // cname: []
+    // mx: []
+    // ptr: []
+    // soa: []
+    // srv: []
+    // txt: []
+    virtualNetworkLinks: [
+      {
+        name: '${uniqueString(vnetResourceId)}-api'
+        registrationEnabled: false
+        virtualNetworkResourceId: vnetResourceId
+      }
+    ]
+  }
+}
+
+module notebooksPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.0' = {
+  name: notebooksPrivateDnsZoneName
+  params: {
+    // Required parameters
+    name: notebooksPrivateDnsZoneName
+    // Non-required parameters
+    location: 'global'
+    tags: tags
+    // a:[]
+    // aaaa: []
+    // cname: []
+    // mx: []
+    // ptr: []
+    // soa: []
+    // srv: []
+    // txt: []
+    virtualNetworkLinks: [
+      {
+        name: '${uniqueString(vnetResourceId)}-notebooks'
+        registrationEnabled: false
+        virtualNetworkResourceId: vnetResourceId
+      }
+    ]
+  }
+}
 // Create the Azure Machine Learning workspace from AVM
 module amlWorkspace 'br/public:avm/res/machine-learning-services/workspace:0.9.1' = {
   name: amlWorkspaceName
@@ -52,14 +109,38 @@ module amlWorkspace 'br/public:avm/res/machine-learning-services/workspace:0.9.1
     associatedKeyVaultResourceId: keyVaultId
     associatedStorageAccountResourceId: storageAccountId
     publicNetworkAccess: 'Disabled'
-
     description: 'Azure Machine Learning workspace'
     managedNetworkSettings: {
       isolationMode: 'AllowInternetOutbound'
     }
+    sharedPrivateLinkResources: []
+    managedIdentities: {
+      systemAssigned: true
+    }
+    privateEndpoints: [
+      {
+        name: privateEndpointName
+        customDnsConfigs: []
+        subnetResourceId: subnetResourceId
+        customNetworkInterfaceName: customNetworkInterfaceName
+        privateDnsZoneGroup: {
+          name: privateZoneGroupName
+          privateDnsZoneGroupConfigs: [
+            {
+              name: replace(azuremlPrivateDnsZoneName, '.', '-')
+              privateDnsZoneResourceId: azuremlPrivateDnsZone.outputs.resourceId
+            }
+            {
+              name: replace(notebooksPrivateDnsZoneName, '.', '-')
+              privateDnsZoneResourceId: notebooksPrivateDnsZone.outputs.resourceId
+            }
+          ]
+        }
+      }
+    ]
     connections: [
       {
-        name: '${amlWorkspaceName}-connection-AIServices'
+        name: amlWorkspaceName
         connectionProperties: {
           authType: 'ApiKey'
           credentials: {
@@ -77,74 +158,4 @@ module amlWorkspace 'br/public:avm/res/machine-learning-services/workspace:0.9.1
     ]
   }
 }
-//create private endpoints for the keyvault
-module amlWorkspacePrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.1' = {
-  name: privateEndpointName
-  params: {
-    name: privateEndpointName
-    location: location
-    subnetResourceId: subnetResourceId
-    tags: tags
-    customNetworkInterfaceName: customNetworkInterfaceName
-    privateLinkServiceConnections: [
-      {
-        name: amlWorkspaceName
-        properties: {
-          privateLinkServiceId: amlWorkspace.outputs.resourceId
-          groupIds: [
-            'amlworkspace'
-          ]
-        }
-      }
-    ]
-    privateDnsZoneGroup: {
-      name: 'default'
-      privateDnsZoneGroupConfigs: [
-        {
-          name: 'privatelink-api-azureml-ms'
-          privateDnsZoneResourceId: privateLinkApi.outputs.resourceId
-        }
-        {
-          name: 'privatelink-notebooks-azure-net'
-          privateDnsZoneResourceId: privateLinkNotebooks.outputs.resourceId
-        }
-      ]
-    }
-  }
-}
-
-module privateLinkApi 'br/public:avm/res/network/private-dns-zone:0.7.0' = {
-  name: 'privatelink.api.azureml.ms'
-  params: {
-    // Required parameters
-    name: 'privatelink.api.azureml.ms'
-    // Non-required parameters
-    location: 'global'
-    virtualNetworkLinks: [
-      {
-        name: '${uniqueString(vnetResourceId)}-api'
-        registrationEnabled: false
-        virtualNetworkResourceId: vnetResourceId
-      }
-    ]
-  }
-}
-
-module privateLinkNotebooks 'br/public:avm/res/network/private-dns-zone:0.7.0' = {
-  name: 'privatelink.notebooks.azure.net'
-  params: {
-    // Required parameters
-    name: 'privatelink.notebooks.azure.net'
-    // Non-required parameters
-    location: 'global'
-    virtualNetworkLinks: [
-      {
-        name: '${uniqueString(vnetResourceId)}-notebooks'
-        registrationEnabled: false
-        virtualNetworkResourceId: vnetResourceId
-      }
-    ]
-  }
-}
-
 output amlWorkspaceID string = amlWorkspace.outputs.resourceId

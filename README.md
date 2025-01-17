@@ -48,42 +48,6 @@ This Bicep template defines a module for deploying an Azure Machine Learning (AM
    - `vnetResourceId`: The resource ID of the virtual network.
    - `subnetResourceId`: The resource ID of the subnet.
 
-### Example of a Complete Bicep Template
-
-Here is an example of how the complete Bicep template might look, including the parameters section:
-
-```bicep
-param amlName string
-param customNetworkInterfaceName string
-param location string
-param tags object
-param containerRegistry object
-param keyVault object
-param storage object
-param aiServices object
-param applicationInsights object
-param vnetResourceId string
-param subnetResourceId string
-
-module amlWorkspace 'core/aml/aml-workspace.bicep' = {
-  name: '${amlName}-deployment'
-  scope: rg
-  params: {
-    amlWorkspaceName: amlName
-    customNetworkInterfaceName: customNetworkInterfaceName
-    location: location
-    tags: tags
-    containerRegistryId: containerRegistry.outputs.containerRegistryResourceId
-    keyVaultId: keyVault.outputs.keyVaultResourceId
-    storageAccountId: storage.outputs.storageResourceId
-    aiServicesId: aiServices.outputs.aiServicesResourceId
-    aiServicesTarget: aiServices.outputs.aiservicesTarget
-    applicationInsightsId: applicationInsights.outputs.applicationInsightsResourceId
-    vnetResourceId: vnetResourceId
-    subnetResourceId: subnetResourceId
-  }
-}
-```
 
 This template defines the necessary parameters and uses them to configure the AML workspace module. Make sure to replace the placeholder paths and parameter values with actual values relevant to your deployment.
 
@@ -96,6 +60,45 @@ This project framework provides the following features:
 ### Architecture Diagram
 <img src="./images/architecture@2x.png" alt="Archjitecture" width="80%">
 
+### Mermaid chart
+```mermaid
+graph TD
+    subgraph Subscription
+        direction TB
+        RG[Resource Group]
+        subgraph RG
+            direction TB
+            AI[Application Insights]
+            KV[Key Vault]
+            ACR[Container Registry]
+            SA[Storage Account]
+            AIS[Open AI Services]
+            AML[AML Workspace]
+        end
+    end
+    AI -->|Depends on| RG
+    KV -->|Depends on| RG
+    ACR -->|Depends on| RG
+    SA -->|Depends on| RG
+    AIS -->|Depends on| RG
+    AML -->|Depends on| RG
+    Subnet --> |Depends on | VNet
+    subgraph Dependencies
+        direction TB
+        VNet[Virtual Network]
+        Subnet[Subnet]
+    end
+    KV -->|Uses| Subnet
+    ACR -->|Uses| Subnet
+    SA -->|Uses| Subnet
+    AIS -->|Uses| Subnet
+    AML -->|Uses| Subnet
+    AML -->|Depends on| ACR
+    AML -->|Depends on| KV
+    AML -->|Depends on| SA
+    AML -->|Depends on| AIS
+    AML -->|Depends on| AI
+````    
 ## Getting Started
 
 To get started with this project, follow the instructions in the sections below to set up your environment and deploy the resources.
@@ -184,5 +187,5 @@ This repository contains the following Bicep files:
 
 
 ## Credits
-###### Author : Pinaki Ghatak - Sr. CSA - Microsoft. Last Update : 14-Jan-2025
+###### Author : Pinaki Ghatak - Sr. CSA - Microsoft. Last Update : 17-Jan-2025
 

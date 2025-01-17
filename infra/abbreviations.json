@@ -85,6 +85,7 @@
     "networkNetworkWatchers": "nw-",
     "networkPrivateDnsZones": "pdnsz-",
     "networkPrivateLinkServices": "pl-",
+    "networkPrivateEndpoint": "pep-",
     "networkPublicIPAddresses": "pip-",
     "networkPublicIPPrefixes": "ippre-",
     "networkRouteFilters": "rf-",

@@ -3,11 +3,6 @@ targetScope = 'subscription'
 // Execute this main file to deploy Azure AI studio resources in the basic security configuration
 
 // Parameters
-@minLength(2)
-@maxLength(12)
-@description('Name for the AI resource and used to derive name of dependent resources.')
-param amlName string = 'demo'
-
 @description('Resource name of the virtual network to deploy the resource into.')
 param vnetName string
 
@@ -29,27 +24,28 @@ param resourceGroupName string = ''
 param environmentName string
 
 //variables
+//The VNET and subnet resources are used to create the private endpoints. This should already exist in the subscription
+var vnetResourceId = '/subscriptions/${subscription().subscriptionId}/resourceGroups/${vnetRgName}/providers/Microsoft.Network/virtualNetworks/${vnetName}'
+var subnetResourceId = '${vnetResourceId}/subnets/${subnetName}'
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 var tags = { 'azd-env-name': environmentName }
 
 var applicationInsightsName = '${abbrs.insightsComponents}${resourceToken}'
-
 var containerRegistryName = '${abbrs.containerRegistryRegistries}${resourceToken}'
-var containerRegistryPleName = '${abbrs.networkPrivateLinkServices}${containerRegistryName}-pe'
+
 var keyvaultName = '${abbrs.keyVaultVaults}${resourceToken}'
-var keyvaultPleName = '${abbrs.networkPrivateLinkServices}${keyvaultName}-pe'
+
 var logAnalyticsWorkspaceName = '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
-
 var storageAccountName = '${abbrs.storageStorageAccounts}${resourceToken}'
-var storagePleBlobName = '${abbrs.networkPrivateLinkServices}${storageAccountName}-blob'
-var storagePleFileName = '${abbrs.networkPrivateLinkServices}${storageAccountName}-file'
+var customNetworkInterfaceName = '${abbrs.networkNetworkInterfaces}-${resourceToken}'
 
-//The VNET and subnet resources are used to create the private endpoints. This should already exist in the subscription
-var vnetResourceId = '/subscriptions/${subscription().subscriptionId}/resourceGroups/${vnetRgName}/providers/Microsoft.Network/virtualNetworks/${vnetName}'
-var subnetResourceId = '${vnetResourceId}/subnets/${subnetName}'
-var customNetworkInterfaceName = '${abbrs.machineLearningServicesWorkspaces}-${resourceToken}-nic'
+var aiServicesName = '${abbrs.cognitiveServicesAccounts}${resourceToken}'
+var mlWorkspaceName = '${abbrs.machineLearningServicesWorkspaces}${resourceToken}'
+var amlWorkspacePEName = '${abbrs.networkPrivateEndpoint}${mlWorkspaceName}'
+var amlWorkspacePrivateZoneGroupName = '${abbrs.networkPrivateDnsZones}${mlWorkspaceName}'
+
 resource rg 'Microsoft.Resources/resourceGroups@2024-07-01' = {
   name: !empty(resourceGroupName) ? resourceGroupName : '${abbrs.resourcesResourceGroups}${environmentName}'
   location: location
@@ -74,7 +70,6 @@ module keyVault 'core/security/keyvault.bicep' = {
   scope: rg
   params: {
     keyvaultName: keyvaultName
-    keyvaultPleName: keyvaultPleName
     virtualNetworkId: vnetResourceId
     subnetId: subnetResourceId
     location: location
@@ -88,23 +83,9 @@ module containerRegistry 'core/acr/containerregistry.bicep' = {
   params: {
     acrName: containerRegistryName
     location: location
-    containerRegistryPleName: containerRegistryPleName
     subnetResourceId: subnetResourceId
     virtualNetworkId: vnetResourceId
     tags: tags
-  }
-}
-
-module aiServices 'core/ai/cognitiveservices.bicep' = {
-  name: 'ai-deployment'
-  scope: rg
-  params: {
-    location: location
-    tags: tags
-    aiServiceName: amlName
-    aiServicesPleName: amlName
-    subnetId: subnetResourceId
-    virtualNetworkId: vnetResourceId
   }
 }
 
@@ -113,20 +94,31 @@ module storage 'core/storage/storge.bicep' = {
   scope: rg
   params: {
     storageName: storageAccountName
-    storagePleBlobName: storagePleBlobName
-    storagePleFileName: storagePleFileName
     subnetId: subnetResourceId
     virtualNetworkId: vnetResourceId
     location: location
     tags: tags
   }
 }
-
-module amlWorkspace 'core/aml/aml-workspace.bicep' = {
-  name: '${amlName}-deployment'
+module aiServices 'core/ai/cognitiveservices.bicep' = {
+  name: '${aiServicesName}-deployment'
   scope: rg
   params: {
-    amlWorkspaceName: amlName
+    location: location
+    tags: tags
+    aiServiceName: aiServicesName
+    // aiServicesPleName: aiServicesPleName
+    subnetId: subnetResourceId
+    virtualNetworkId: vnetResourceId
+  }
+}
+
+module amlWorkspace 'core/aml/aml-workspace.bicep' = {
+  name: '${mlWorkspaceName}-deployment'
+  scope: rg
+  params: {
+    amlWorkspaceName: mlWorkspaceName
+    privateZoneGroupName: amlWorkspacePrivateZoneGroupName
     customNetworkInterfaceName: customNetworkInterfaceName
     location: location
     tags: tags
@@ -137,6 +129,7 @@ module amlWorkspace 'core/aml/aml-workspace.bicep' = {
     aiServicesTarget: aiServices.outputs.aiservicesTarget
     applicationInsightsId: applicationInsights.outputs.applicationInsightsResourceId
     vnetResourceId: vnetResourceId
+    privateEndpointName: amlWorkspacePEName
     subnetResourceId: subnetResourceId
   }
 }
