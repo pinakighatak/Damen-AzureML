@@ -58,47 +58,70 @@ This project framework provides the following features:
 * Using Azure Verofied modules (aka `avm`)
 
 ### Architecture Diagram
-<img src="./images/architecture@2x.png" alt="Archjitecture" width="80%">
-
-### Mermaid chart
 ```mermaid
 graph TD
-    subgraph Subscription
+    subgraph AzureSubscription["☁️ Azure Subscription"]
         direction TB
-        RG[Resource Group]
-        subgraph RG
+        subgraph ResourceGroup ["📋 Resource Group"]
             direction TB
-            AI[Application Insights]
-            KV[Key Vault]
-            ACR[Container Registry]
-            SA[Storage Account]
-            AIS[Open AI Services]
-            AML[AML Workspace]
+            subgraph AMLWorkspace ["AML Workspace"]
+                direction TB
+                ModuleAMWW["AML Workspace"]
+                AMLSOAIDNSZONE["OpenAI Zone"]
+                AMLNBDNSZONE["Notebook DNS Zone"]
+                ModuleAMWW --> AMLSOAIDNSZONE
+                ModuleAMWW --> AMLNBDNSZONE
+            end    
+            subgraph Storage["Azure Storage"]
+                direction TB
+                ModuleStorage["Storage Account"]
+                STABlobDNSZONE["Blob DNS Zone"]
+                STAFileDNSZONE["File DNS Zone"]
+                ModuleStorage --> STABlobDNSZONE
+                ModuleStorage --> STAFileDNSZONE
+            end    
+            subgraph AIServices["Open AI Services"]
+                direction TB
+                ModuleAIServices["AI Services"]
+                CogDNSZONE["Cognitive DNS Zone"]
+                AIDNSZONE["AI DNS Zone"]
+                ModuleAIServices --> CogDNSZONE
+                ModuleAIServices --> AIDNSZONE
+            end
+            subgraph AppInsights["Application Insights"]
+                direction TB
+                AInsights["Application Insights"]
+                LAW["Log Analytics Workspace"]
+                AInsights --> LAW
+            end    
+            subgraph ACR["Container Registry"]
+                direction TB
+                CR["Container Registry"]
+                ACRDNS["ACR DNS Zone"]
+                CR --> ACRDNS
+            end    
+            subgraph Keyvault["Azure Keyvault"]
+                direction TB
+                AKV["Keyvault"]
+                AKVDNS["Keyvault DNS Zone"]
+                AKV --> AKVDNS
+            end    
         end
     end
-    AI -->|Depends on| RG
-    KV -->|Depends on| RG
-    ACR -->|Depends on| RG
-    SA -->|Depends on| RG
-    AIS -->|Depends on| RG
-    AML -->|Depends on| RG
-    Subnet --> |Depends on | VNet
-    subgraph Dependencies
-        direction TB
-        VNet[Virtual Network]
-        Subnet[Subnet]
-    end
-    KV -->|Uses| Subnet
-    ACR -->|Uses| Subnet
-    SA -->|Uses| Subnet
-    AIS -->|Uses| Subnet
-    AML -->|Uses| Subnet
-    AML -->|Depends on| ACR
-    AML -->|Depends on| KV
-    AML -->|Depends on| SA
-    AML -->|Depends on| AIS
-    AML -->|Depends on| AI
-````    
+    AMLWorkspace --> Storage
+    AMLWorkspace --> AIServices
+    AMLWorkspace --> AppInsights
+    AMLWorkspace --> ACR
+    AMLWorkspace --> Keyvault
+    style AMLWorkspace fill:#006DC1,stroke:#fff,stroke-width:1px,color:#fff
+    style Storage fill:#006DC1,stroke:#fff,stroke-width:1px,color:#fff
+    style AIServices fill:#006DC1,stroke:#fff,color:#fff
+    style AppInsights fill:#006DC1,stroke:#fff,color:#fff
+    style ACR fill:#006DC1,stroke:#fff,color:#fff
+    style Keyvault fill:#006DC1,stroke:#fff,color:#fff
+    style ModuleStorage stroke:#fff,color:#fff
+    linkStyle default stroke:#fff
+```
 ## Getting Started
 
 To get started with this project, follow the instructions in the sections below to set up your environment and deploy the resources.
