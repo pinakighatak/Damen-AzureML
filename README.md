@@ -57,70 +57,104 @@ This project framework provides the following features:
 * Using Azure Deeloper CLI - `azd`
 * Using Azure Verofied modules (aka `avm`)
 
-### Architecture Diagram
+### Architecture Diagram (Mermaid chart)
 ```mermaid
+%%{
+  init: {
+    'theme': 'dark',
+    'themeVariables': {
+      'primaryColor': '#BB2528',
+      'primaryTextColor': '#fff',
+      'primaryBorderColor': '#fff',
+      'lineColor': '#00ffff',
+      'secondaryColor': '#006100',
+      'tertiaryColor': '#fff'
+    }
+  }
+}%%
 graph TD
-    subgraph AzureSubscription["☁️ Azure Subscription"]
+subgraph AzureSubscription["☁️ Azure Subscription"]
+    direction TB
+    subgraph ResourceGroup ["📋 Resource Group"]
         direction TB
-        subgraph ResourceGroup ["📋 Resource Group"]
+        subgraph AMLWorkspace ["AML Workspace"]
+            direction LR
+            ModuleAMWW["AML Workspace"]
+            AMLSOAIDNSZONE(["OpenAI Zone"])
+            AMLNBDNSZONE(["Notebook DNS Zone"])
+            ModuleAMWW --> AMLSOAIDNSZONE
+            ModuleAMWW --> AMLNBDNSZONE
+        end    
+        subgraph AppInsights["Application Insights"]
             direction TB
-            subgraph AMLWorkspace ["AML Workspace"]
-                direction TB
-                ModuleAMWW["AML Workspace"]
-                AMLSOAIDNSZONE["OpenAI Zone"]
-                AMLNBDNSZONE["Notebook DNS Zone"]
-                ModuleAMWW --> AMLSOAIDNSZONE
-                ModuleAMWW --> AMLNBDNSZONE
-            end    
-            subgraph Storage["Azure Storage"]
-                direction TB
-                ModuleStorage["Storage Account"]
-                STABlobDNSZONE["Blob DNS Zone"]
-                STAFileDNSZONE["File DNS Zone"]
-                ModuleStorage --> STABlobDNSZONE
-                ModuleStorage --> STAFileDNSZONE
-            end    
-            subgraph AIServices["Open AI Services"]
-                direction TB
-                ModuleAIServices["AI Services"]
-                CogDNSZONE["Cognitive DNS Zone"]
-                AIDNSZONE["AI DNS Zone"]
-                ModuleAIServices --> CogDNSZONE
-                ModuleAIServices --> AIDNSZONE
-            end
-            subgraph AppInsights["Application Insights"]
-                direction TB
-                AInsights["Application Insights"]
-                LAW["Log Analytics Workspace"]
-                AInsights --> LAW
-            end    
-            subgraph ACR["Container Registry"]
-                direction TB
-                CR["Container Registry"]
-                ACRDNS["ACR DNS Zone"]
-                CR --> ACRDNS
-            end    
-            subgraph Keyvault["Azure Keyvault"]
-                direction TB
-                AKV["Keyvault"]
-                AKVDNS["Keyvault DNS Zone"]
-                AKV --> AKVDNS
-            end    
+            AInsights["Application Insights"]
+            LAW["Log Analytics Workspace"]
+            AInsights --> LAW
+        end    
+        subgraph Storage["Azure Storage"]
+            direction TB
+            ModuleStorage["Storage Account"]
+            STABlobDNSZONE(["Blob DNS Zone"])
+            STAFileDNSZONE(["File DNS Zone"])
+            ModuleStorage --> STABlobDNSZONE
+            ModuleStorage --> STAFileDNSZONE
+        end    
+        subgraph AIServices["Open AI Services"]
+            direction TB
+            ModuleAIServices["AI Services"]
+            CogDNSZONE(["Cognitive DNS Zone"])
+            AIDNSZONE(["AI DNS Zone"])
+            ModuleAIServices --> CogDNSZONE
+            ModuleAIServices --> AIDNSZONE
         end
+        subgraph ACR["Container Registry"]
+            direction TB
+            CR["Container Registry"]
+            ACRDNS(["ACR DNS Zone"])
+            CR --> ACRDNS
+        end    
+        subgraph Keyvault["Azure Keyvault"]
+            direction TB
+            AKV["Keyvault"]
+            AKVDNS(["Keyvault DNS Zone"])
+            AKV --> AKVDNS
+        end    
     end
-    AMLWorkspace --> Storage
-    AMLWorkspace --> AIServices
-    AMLWorkspace --> AppInsights
-    AMLWorkspace --> ACR
-    AMLWorkspace --> Keyvault
-    style AMLWorkspace fill:#006DC1,stroke:#fff,stroke-width:1px,color:#fff
-    style Storage fill:#006DC1,stroke:#fff,stroke-width:1px,color:#fff
-    style AIServices fill:#006DC1,stroke:#fff,color:#fff
-    style AppInsights fill:#006DC1,stroke:#fff,color:#fff
-    style ACR fill:#006DC1,stroke:#fff,color:#fff
-    style Keyvault fill:#006DC1,stroke:#fff,color:#fff
-    style ModuleStorage stroke:#fff,color:#fff
-    linkStyle default stroke:#fff
+    subgraph NetworkResourceGroup ["Resource Group"]
+        direction TB
+        subgraph VNET ["VNet"]
+            direction TB
+            subgraph ExistingSubNet["SubNet"]
+            direction TB
+                PEPRegistry["ACR Private Endpoint"]
+                PEPVault["Keyvault Private Endpoint"]
+                PEPBlob["Blob Private Endpoint"]
+                PEPFile["File Private Endpoint"]
+            end
+
+        end    
+    end
+end
+
+AMLWorkspace --> Storage
+AMLWorkspace --> AIServices
+AMLWorkspace --> AppInsights
+AMLWorkspace --> ACR
+AMLWorkspace --> Keyvault
+STABlobDNSZONE -.-> PEPBlob
+STAFileDNSZONE -.-> PEPFile
+ACRDNS -.-> PEPRegistry
+AKVDNS -.->PEPVault
+style AMLWorkspace fill:#006DC1,stroke:#fff,stroke-width:1px,color:#fff
+style Storage fill:#006DC1,stroke:#fff,stroke-width:1px,color:#fff
+style AIServices fill:#006DC1,stroke:#fff,color:#fff
+style AppInsights fill:#006DC1,stroke:#fff,color:#fff
+style ACR fill:#006DC1,stroke:#fff,color:#fff
+style Keyvault fill:#006DC1,stroke:#fff,color:#fff
+style VNET fill:#272B32,stroke:#fff,color:#fff
+style ExistingSubNet fill:#57792F,stroke:#fff,color:#fff
+style ModuleStorage stroke:#fff,color:#fff
+
 ```
 ## Getting Started
 
@@ -210,5 +244,5 @@ This repository contains the following Bicep files:
 
 
 ## Credits
-###### Author : Pinaki Ghatak - Sr. CSA - Microsoft. Last Update : 17-Jan-2025
+###### Author : Pinaki Ghatak - Sr. CSA - Microsoft. Last Update : 19-Jan-2025
 
