@@ -72,90 +72,81 @@ This project framework provides the following features:
     }
   }
 }%%
-graph TD
-subgraph AzureSubscription["☁️ Azure Subscription"]
-    direction TB
-    subgraph ResourceGroup ["📋 Resource Group"]
-        direction TB
-        subgraph AMLWorkspace ["AML Workspace"]
-            direction LR
-            ModuleAMWW["AML Workspace"]
-            AMLSOAIDNSZONE(["OpenAI Zone"])
-            AMLNBDNSZONE(["Notebook DNS Zone"])
-            ModuleAMWW --> AMLSOAIDNSZONE
-            ModuleAMWW --> AMLNBDNSZONE
-        end    
-        subgraph AppInsights["Application Insights"]
-            direction TB
-            AInsights["Application Insights"]
-            LAW["Log Analytics Workspace"]
-            AInsights --> LAW
-        end    
-        subgraph Storage["Azure Storage"]
-            direction TB
-            ModuleStorage["Storage Account"]
-            STABlobDNSZONE(["Blob DNS Zone"])
-            STAFileDNSZONE(["File DNS Zone"])
-            ModuleStorage --> STABlobDNSZONE
-            ModuleStorage --> STAFileDNSZONE
-        end    
-        subgraph AIServices["Open AI Services"]
-            direction TB
-            ModuleAIServices["AI Services"]
-            CogDNSZONE(["Cognitive DNS Zone"])
-            AIDNSZONE(["AI DNS Zone"])
-            ModuleAIServices --> CogDNSZONE
-            ModuleAIServices --> AIDNSZONE
-        end
-        subgraph ACR["Container Registry"]
-            direction TB
-            CR["Container Registry"]
-            ACRDNS(["ACR DNS Zone"])
-            CR --> ACRDNS
-        end    
-        subgraph Keyvault["Azure Keyvault"]
-            direction TB
-            AKV["Keyvault"]
-            AKVDNS(["Keyvault DNS Zone"])
-            AKV --> AKVDNS
-        end    
-    end
-    subgraph NetworkResourceGroup ["Resource Group"]
-        direction TB
-        subgraph VNET ["VNet"]
-            direction TB
-            subgraph ExistingSubNet["SubNet"]
-            direction TB
-                PEPRegistry["ACR Private Endpoint"]
-                PEPVault["Keyvault Private Endpoint"]
-                PEPBlob["Blob Private Endpoint"]
-                PEPFile["File Private Endpoint"]
-            end
 
-        end    
+graph TD
+subgraph Subscription[Azure Subscription]
+    direction LR
+    subgraph NewRG[Resource Group]
+        subgraph MLWorkspace[ML Workspace]
+            direction TB
+            MLWDNSZone([ML DNS Zone])
+            MLNotebookDNSZone([ML Notebook DNS Zone])
+            PEPMLDNSZone[/Private Endpoint/]
+            PEPMLNotebookDNSZone[/Private Endpoint/]
+        end
+        subgraph Monitor[Log Analytics]
+            direction LR
+            AppInsights[App Insights]
+            LAW[Log Analytics]
+            AppInsights --> LAW
+        end
+        subgraph ACR[Container Registry]
+            ACRDNSZone([DNS Zone])
+            PEPACR[/Private Endpoint/]
+            PEPACR --> ACRDNSZone
+        end
+        subgraph Vault[Key Vault]
+            AKVDNSZone([DNS Zone])
+            PEPAKV[/Private Endpoint/]
+            PEPAKV --> AKVDNSZone
+        end
+        subgraph Storage[Storage]
+            StorageDNSZone([DNS Zone])
+            PEPStorage[/Private Endpoint/]
+            PEPStorage --> StorageDNSZone
+        end
+        subgraph OpenAI[Open AI]
+            OpenAIDNSZone([Open AI DNS Zone])
+            PEPOpenAIDNSZone[/Private Endpoint/]
+            CognitiveDNSZone([Cognitive DNS Zone])
+            PEPCognitiveDNSZone[/Private Endpoint/]
+        end
+        PEPOpenAIDNSZone --> OpenAIDNSZone
+        PEPCognitiveDNSZone --> CognitiveDNSZone
+        PEPMLDNSZone --> MLWDNSZone
+        PEPMLNotebookDNSZone --> MLNotebookDNSZone
+        MLWorkspace --> Monitor
+        MLWorkspace --> ACR
+        MLWorkspace --> Vault
+        MLWorkspace --> Storage
+        MLWorkspace --> OpenAI
     end
+    subgraph ExistingRG[Existing Resource Group]
+        subgraph VNET[Virtual Network]
+            SubNet[SubNet]
+        end
+    end
+    PEPACR -..-> SubNet
+    PEPOpenAIDNSZone -..-> SubNet
+    PEPCognitiveDNSZone -..-> SubNet
+    PEPMLDNSZone -..-> SubNet
+    PEPMLNotebookDNSZone -..-> SubNet
+    PEPAKV -..-> SubNet
+    PEPStorage -..-> SubNet
 end
 
-AMLWorkspace --> Storage
-AMLWorkspace --> AIServices
-AMLWorkspace --> AppInsights
-AMLWorkspace --> ACR
-AMLWorkspace --> Keyvault
-STABlobDNSZONE -.-> PEPBlob
-STAFileDNSZONE -.-> PEPFile
-ACRDNS -.-> PEPRegistry
-AKVDNS -.->PEPVault
-style AMLWorkspace fill:#006DC1,stroke:#fff,stroke-width:1px,color:#fff
-style Storage fill:#006DC1,stroke:#fff,stroke-width:1px,color:#fff
-style AIServices fill:#006DC1,stroke:#fff,color:#fff
-style AppInsights fill:#006DC1,stroke:#fff,color:#fff
-style ACR fill:#006DC1,stroke:#fff,color:#fff
-style Keyvault fill:#006DC1,stroke:#fff,color:#fff
+style MLWorkspace fill:#1C3772,stroke:#fff,stroke-width:1px,color:#fff
+style Storage fill:#1C3772,stroke:#fff,stroke-width:1px,color:#fff
+style OpenAI fill:#1C3772,stroke:#fff,color:#fff
+style Monitor fill:#BD6aE5,stroke:#fff,color:#fff
+style ACR fill:#1C3772,stroke:#fff,color:#fff
+style Vault fill:#006DC1,stroke:#fff,color:#fff
 style VNET fill:#272B32,stroke:#fff,color:#fff
-style ExistingSubNet fill:#57792F,stroke:#fff,color:#fff
-style ModuleStorage stroke:#fff,color:#fff
-
+style SubNet fill:#57792F,stroke:#fff,color:#fff
+style NewRG stroke:#00ffff,color:#fff
+style ExistingRG stroke:#ff0f,color:#fff
 ```
+
 ## Getting Started
 
 To get started with this project, follow the instructions in the sections below to set up your environment and deploy the resources.
@@ -244,5 +235,5 @@ This repository contains the following Bicep files:
 
 
 ## Credits
-###### Author : Pinaki Ghatak - Sr. CSA - Microsoft. Last Update : 19-Jan-2025
+###### Author : Pinaki Ghatak - Sr. CSA - Microsoft. Last Update : 20-Jan-2025
 

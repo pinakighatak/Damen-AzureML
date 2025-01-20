@@ -100,7 +100,7 @@ module storage 'core/storage/storge.bicep' = {
     tags: tags
   }
 }
-module aiServices 'core/ai/cognitiveservices.bicep' = {
+module openAIServices 'core/ai/cognitiveservices.bicep' = {
   name: '${aiServicesName}-deployment'
   scope: rg
   params: {
@@ -109,11 +109,12 @@ module aiServices 'core/ai/cognitiveservices.bicep' = {
     aiServiceName: aiServicesName
     // aiServicesPleName: aiServicesPleName
     subnetId: subnetResourceId
+    kind: 'CognitiveServices'
     virtualNetworkId: vnetResourceId
   }
 }
 
-module amlWorkspace 'core/aml/aml-workspace.bicep' = {
+module machineLearningWorkspace 'core/aml/aml-workspace.bicep' = {
   name: '${mlWorkspaceName}-deployment'
   scope: rg
   params: {
@@ -125,8 +126,8 @@ module amlWorkspace 'core/aml/aml-workspace.bicep' = {
     containerRegistryId: containerRegistry.outputs.containerRegistryResourceId
     keyVaultId: keyVault.outputs.keyVaultResourceId
     storageAccountId: storage.outputs.storageResourceId
-    aiServicesId: aiServices.outputs.aiServicesResourceId
-    aiServicesTarget: aiServices.outputs.aiservicesTarget
+    aiServicesId: openAIServices.outputs.aiServicesResourceId
+    aiServicesTarget: openAIServices.outputs.aiservicesTarget
     applicationInsightsId: applicationInsights.outputs.applicationInsightsResourceId
     vnetResourceId: vnetResourceId
     privateEndpointName: amlWorkspacePEName

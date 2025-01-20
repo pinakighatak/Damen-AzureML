@@ -67,35 +67,5 @@ module containerRegistry 'br/public:avm/res/container-registry/registry:0.7.0' =
   }
 }
 
-// // create private endpoints for the keyvault
-// module containerRegistryPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.9.1' = {
-//   name: containerRegistryPleName
-//   params: {
-//     name: containerRegistryPleName
-//     location: location
-//     subnetResourceId: subnetResourceId
-//     tags: tags
-//     privateLinkServiceConnections: [
-//       {
-//         name: uniqueString(containerRegistryPleName)
-//         properties: {
-//           privateLinkServiceId: containerRegistry.outputs.resourceId
-//           groupIds: [
-//             'registry'
-//           ]
-//         }
-//       }
-//     ]
-//     privateDnsZoneGroup: {
-//       name: 'registry-privatednszonegroup'
-//       privateDnsZoneGroupConfigs: [
-//         {
-//           name: privateDnsZoneName
-//           privateDnsZoneResourceId: acrPrivateDnsZone.outputs.resourceId
-//         }
-//       ]
-//     }
-//   }
-// }
 
 output containerRegistryResourceId string = containerRegistry.outputs.resourceId

@@ -48,7 +48,7 @@ var openAiPrivateDnsZoneName = 'privatelink.openai.azure.com'
   'TextTranslation'
 ])
 
-param kind string = 'AIServices'
+param kind string = 'CognitiveServices'
 
 module cognitiveServicesPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.7.0' = {
   name: cognitiveServicesPrivateDnsZoneName
